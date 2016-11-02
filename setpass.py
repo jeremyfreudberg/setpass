@@ -5,6 +5,10 @@ from flask import Flask, Response
 from flask import request, abort, render_template
 from flask_sqlalchemy import SQLAlchemy
 
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient.v3 import client
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'
 db = SQLAlchemy(app)
@@ -63,7 +67,15 @@ def set_password():
 
 
 def _set_openstack_password(user_id, old_password, new_password):
-    pass
+    auth = v3.Password(auth_url='https://my.keystone.com:5000/v3',
+                       user_id=user_id,
+                       password=old_password,
+                       project_id='project_id')
+
+    sess = session.Session(auth=auth)
+    keystone = client.Client(session=sess)
+
+    keystone.users.update_password(old_password, new_password)
 
 
 def _set_password(token, password):
