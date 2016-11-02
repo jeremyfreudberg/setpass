@@ -7,17 +7,30 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'
 db = SQLAlchemy(app)
 
 
+class PasswordAlreadyChangedException(Exception):
+    pass
+
+
+class TokenNotFoundException(Exception):
+    pass
+
+
+class BadRequestException(Exception):
+    pass
+
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(64), unique=True)
     token = db.Column(db.String(64), nullable=False)
-    old_password = db.Column(db.String(64), nullable=False)
+    password = db.Column(db.String(64), nullable=False)
     changed = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, user_id, token, changed=False):
+    def __init__(self, user_id, token, password, changed=False):
         self.user_id = user_id
         self.token = token
+        self.password = password
         self.changed = changed
 
     def __repr__(self):
@@ -37,23 +50,30 @@ def view_form():
 def set_password():
     token = request.args.get('token')
     password = request.form['password']
-    if not token or not password:
-        abort(400)
 
+    if not token or not password:
+        raise BadRequestException
+
+    _set_password(token, password)
+
+
+def _set_password(token, password):
     # Find user for token
     user = User.find(token)
-    if user and not user.changed:
-        # Login with old_password and set_password in OpenStack to the new one
-        pass
 
+    if user is None:
+        raise TokenNotFoundException
+
+    if user.changed:
+        raise PasswordAlreadyChangedException
+
+    user.changed = True
+    db.session.commit()
+    # Login with old_password and set_password in OpenStack to the new one
+    pass
+
+
+db.create_all()
 
 if __name__ == '__main__':
-    db.create_all()
-
-    u1 = User('id1', 'token1')
-    u2 = User('id2', 'token2', changed=False)
-    db.session.add(u1)
-    db.session.add(u2)
-    db.session.commit()
-
     app.run()
