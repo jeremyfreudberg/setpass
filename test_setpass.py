@@ -37,6 +37,12 @@ class TestSetpass(object):
     def app(self):
         return setpass.app.test_client()
 
+    @staticmethod
+    def _get_expired_time(timestamp):
+        return timestamp + \
+               datetime.timedelta(seconds=setpass.EXPIRES_AFTER_SECONDS + 5)
+
+    # Internal method tests
     def test_internal_wrong_token(self, user):
         wrong_token = 'wrong_token'
         assert wrong_token != user.token
@@ -48,6 +54,11 @@ class TestSetpass(object):
         setpass._set_password(user.token, 'new_password')
         with pytest.raises(setpass.TokenNotFoundException):
             setpass._set_password(user.token, 'another_new_password')
+
+    def test_internal_expired_token(self, user):
+        with freezegun.freeze_time(self._get_expired_time(user.updated_at)):
+            with pytest.raises(setpass.TokenExpiredException):
+                setpass._set_password(user.token, 'new_password')
 
     # API Tests
     def test_add(self, app):
@@ -100,11 +111,8 @@ class TestSetpass(object):
         assert r.status_code == 404
 
     def test_set_pass_expired(self, app, user):
-        expired_time = user.updated_at + \
-                       datetime.timedelta(seconds=setpass.EXPIRES_AFTER_SECONDS + 5)
-
-        # Set time to 5 seconds after token expiration
-        with freezegun.freeze_time(expired_time):
+        # Set time to after token expiration
+        with freezegun.freeze_time(self._get_expired_time(user.updated_at)):
             r = app.post('/?token=%s' % user.token, data={'password': 'NEW_PASS'})
 
         assert r.status_code == 403
