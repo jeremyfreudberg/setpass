@@ -35,12 +35,14 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(64), unique=True)
     token = db.Column(db.String(64), unique=True)
+    pin = db.Column(db.String(4), nullable=False)
     password = db.Column(db.String(64), nullable=False)
     updated_at = db.Column(db.DateTime, nullable=False)
 
-    def __init__(self, user_id, token, password):
+    def __init__(self, user_id, token, pin, password):
         self.user_id = user_id
         self.token = token
+        self.pin = pin
         self.password = password
         self.update_timestamp()
 
@@ -112,18 +114,23 @@ def _set_password(token, password):
 
 @app.route('/token/<user_id>', methods=['PUT'])
 def add(user_id):
-    password = request.data
+    payload = json.loads(request.data)
 
     user = User.find(user_id=user_id)
     if user:
-        user.password = password
+        if 'pin' in payload:
+            user.pin = payload['pin']
+        if 'password' in payload:
+            user.password = payload['password']
+
         user.token = str(uuid.uuid4())
         user.update_timestamp()
     else:
         user = User(
             user_id=user_id,
             token=str(uuid.uuid4()),
-            password=password
+            pin=payload['pin'],
+            password=payload['password']
         )
         db.session.add(user)
 

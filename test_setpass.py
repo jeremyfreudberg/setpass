@@ -1,4 +1,5 @@
 import datetime
+import json
 import uuid
 
 import pytest
@@ -15,6 +16,7 @@ class TestSetpass(object):
         user = setpass.User(
             user_id=str(uuid.uuid4()),
             token=str(uuid.uuid4()),
+            pin='1234',
             password=str(uuid.uuid4())
         )
         setpass.db.session.add(user)
@@ -61,40 +63,66 @@ class TestSetpass(object):
                 setpass._set_password(user.token, 'new_password')
 
     # API Tests
-    def test_add(self, app):
-        # Create a new user
+    def test_add_new_user(self, app):
         user_id = str(uuid.uuid4())
+        pin = '1234'
         password = str(uuid.uuid4())
+        payload = json.dumps({'password': password, 'pin': pin})
 
         with freezegun.freeze_time("2016-01-01"):
             timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user_id, data=password)
-        assert r.status_code == 200
-        token = r.data
+            r = app.put('/token/%s' % user_id, data=payload)
 
-        # Ensure we get a match
-        user = setpass.User.find(token=token)
+        user = setpass.User.find(token=r.data)
         assert user.user_id == user_id
         assert user.password == password
+        assert user.pin == pin
         assert timestamp == user.updated_at
-
-        # Calling add again should update the record...
-        password = 'NEW_NEW_PASS'
-
-        with freezegun.freeze_time("2016-01-10"):
-            new_timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user_id, data=password)
-
-        assert user.user_id == user_id
-        assert user.password == password
-        assert user.token == r.data
         assert r.status_code == 200
-        assert user.updated_at != timestamp
-        assert user.updated_at == new_timestamp
 
-        # ...and old token should be invalidated
-        r = app.post('/?token=%s' % token, data={'password': 'NEW_NEW_PASS'})
-        assert r.status_code == 404
+    def test_add_update_pin(self, app, user):
+        old_token = user.token
+        new_pin = '9876'
+        payload = {'pin': new_pin}
+
+        with freezegun.freeze_time("2016-01-01"):
+            timestamp = datetime.datetime.utcnow()
+            r = app.put('/token/%s' % user.user_id, data=json.dumps(payload))
+
+        assert user.pin == new_pin
+        assert user.token != old_token
+        assert timestamp == user.updated_at
+        assert r.data == user.token
+        assert r.status_code == 200
+
+    def test_add_update_password(self, app, user):
+        old_token = user.token
+        new_password = str(uuid.uuid4())
+        payload = {'password': new_password}
+
+        with freezegun.freeze_time("2016-01-01"):
+            timestamp = datetime.datetime.utcnow()
+            r = app.put('/token/%s' % user.user_id, data=json.dumps(payload))
+
+        assert user.password == new_password
+        assert user.token != old_token
+        assert timestamp == user.updated_at
+        assert r.data == user.token
+        assert r.status_code == 200
+
+    def test_add_update_pin_and_password(self, app, user):
+        pin = '1234'
+        password = str(uuid.uuid4())
+        payload = json.dumps({'password': password, 'pin': pin})
+
+        with freezegun.freeze_time("2016-01-01"):
+            timestamp = datetime.datetime.utcnow()
+            r = app.put('/token/%s' % user.user_id, data=payload)
+
+        assert user.password == password
+        assert user.pin == pin
+        assert timestamp == user.updated_at
+        assert r.status_code == 200
 
     def test_set_pass(self, app, user):
         # Change password
