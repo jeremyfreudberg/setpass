@@ -5,29 +5,32 @@ import uuid
 import pytest
 import freezegun
 
-import setpass
+from setpass import api
+from setpass import model
+from setpass import wsgi
+from setpass import exception
 
-setpass.db.create_all()
+model.db.create_all()
 
 
 class TestSetpass(object):
     @staticmethod
     def create(changed=False):
-        user = setpass.User(
+        user = model.User(
             user_id=str(uuid.uuid4()),
             token=str(uuid.uuid4()),
             pin='1234',
             password=str(uuid.uuid4())
         )
-        setpass.db.session.add(user)
-        setpass.db.session.commit()
+        model.db.session.add(user)
+        model.db.session.commit()
         return user
 
     @staticmethod
     def delete(user):
-        assert isinstance(user, setpass.User)
-        setpass.db.session.delete(user)
-        setpass.db.session.commit()
+        assert isinstance(user, model.User)
+        model.db.session.delete(user)
+        model.db.session.commit()
 
     @pytest.fixture
     def user(self):
@@ -37,31 +40,31 @@ class TestSetpass(object):
 
     @pytest.fixture()
     def app(self):
-        return setpass.app.test_client()
+        return wsgi.app.test_client()
 
     @staticmethod
     def _get_expired_time(timestamp):
         return timestamp + \
-               datetime.timedelta(seconds=setpass.EXPIRES_AFTER_SECONDS + 5)
+               datetime.timedelta(seconds=api.EXPIRES_AFTER_SECONDS + 5)
 
     # Internal method tests
     def test_internal_wrong_token(self, user):
         wrong_token = 'wrong_token'
         assert wrong_token != user.token
 
-        with pytest.raises(setpass.TokenNotFoundException):
-            setpass._set_password(wrong_token, user.pin, 'password2')
+        with pytest.raises(exception.TokenNotFoundException):
+            api._set_password(wrong_token, user.pin, 'password2')
 
     def test_internal_set_password_twice(self, user):
         pin = user.pin
-        setpass._set_password(user.token, pin, 'new_password')
-        with pytest.raises(setpass.TokenNotFoundException):
-            setpass._set_password(user.token, pin, 'another_new_password')
+        api._set_password(user.token, pin, 'new_password')
+        with pytest.raises(exception.TokenNotFoundException):
+            api._set_password(user.token, pin, 'another_new_password')
 
     def test_internal_expired_token(self, user):
         with freezegun.freeze_time(self._get_expired_time(user.updated_at)):
-            with pytest.raises(setpass.TokenExpiredException):
-                setpass._set_password(user.token, user.pin, 'new_password')
+            with pytest.raises(exception.TokenExpiredException):
+                api._set_password(user.token, user.pin, 'new_password')
 
     # API Tests
     def test_add_new_user(self, app):
@@ -74,7 +77,7 @@ class TestSetpass(object):
             timestamp = datetime.datetime.utcnow()
             r = app.put('/token/%s' % user_id, data=payload)
 
-        user = setpass.User.find(token=r.data)
+        user = model.User.find(token=r.data)
         assert user.user_id == user_id
         assert user.password == password
         assert user.pin == pin
@@ -128,13 +131,13 @@ class TestSetpass(object):
     def test_set_pass(self, app, user):
         # Change password
         token = user.token
-        pin = user.pin # Save the pin, to reuse it after row deletion
+        pin = user.pin  # Save the pin to reuse it after row deletion
         r = app.post('/?token=%s' % token,
                      data={'password': 'NEW_PASS', 'pin': pin})
         assert r.status_code == 200
 
         # Ensure user record is deleted
-        user = setpass.User.find(token=token)
+        user = model.User.find(token=token)
         assert user is None
 
         # Ensure we get a 404 when reusing the token
