@@ -29,6 +29,7 @@ from setpass import exception
 
 CONF = config.CONF
 
+
 @wsgi.app.route('/', methods=['GET'])
 def view_form():
     return render_template('password_form.html')

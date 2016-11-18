@@ -28,12 +28,12 @@ default_opts = [
                help='Web server port number.'),
 
     cfg.StrOpt('auth_url',
-                default='http://localhost:5000',
-                help='Identity service authentication url.'),
+               default='http://localhost:5000',
+               help='Identity service authentication url.'),
 
     cfg.IntOpt('token_expiration',
-                default=False,
-                help='Time in seconds that a token is valid.'),
+               default=False,
+               help='Time in seconds that a token is valid.'),
 ]
 
 CONF.register_opts(default_opts)
@@ -46,5 +46,6 @@ def load_config():
                               '/etc/setpass.conf'] if path.isfile(f)]
     if conf_files is not []:
         CONF(default_config_files=conf_files)
+
 
 load_config()
