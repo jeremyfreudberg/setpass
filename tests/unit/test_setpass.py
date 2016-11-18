@@ -6,9 +6,12 @@ import pytest
 import freezegun
 
 from setpass import api
+from setpass import config
 from setpass import model
 from setpass import wsgi
 from setpass import exception
+
+CONF = config.CONF
 
 model.db.create_all()
 
@@ -45,7 +48,7 @@ class TestSetpass(object):
     @staticmethod
     def _get_expired_time(timestamp):
         return timestamp + \
-               datetime.timedelta(seconds=api.EXPIRES_AFTER_SECONDS + 5)
+               datetime.timedelta(seconds=CONF['token_expiration'] + 5)
 
     # Internal method tests
     def test_internal_wrong_token(self, user):

@@ -17,8 +17,11 @@ import datetime
 from flask_sqlalchemy import SQLAlchemy
 
 from setpass import wsgi
+from setpass import config
 
-wsgi.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'
+CONF = config.CONF
+
+wsgi.app.config['SQLALCHEMY_DATABASE_URI'] = CONF['database']
 db = SQLAlchemy(wsgi.app)
 
 

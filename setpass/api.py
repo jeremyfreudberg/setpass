@@ -22,13 +22,12 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneclient.v3 import client
 
+from setpass import config
 from setpass import model
 from setpass import wsgi
 from setpass import exception
 
-
-EXPIRES_AFTER_SECONDS = 24 * 3600
-
+CONF = config.CONF
 
 @wsgi.app.route('/', methods=['GET'])
 def view_form():
@@ -79,7 +78,7 @@ def _set_password(token, pin, password):
         raise exception.WrongPinException
 
     delta = datetime.datetime.utcnow() - user.updated_at
-    if delta.total_seconds() > EXPIRES_AFTER_SECONDS:
+    if delta.total_seconds() > CONF['token_expiration']:
         raise exception.TokenExpiredException
 
     # _set_openstack_password(user.user_id, user.password, password)
@@ -112,7 +111,3 @@ def add(user_id):
 
     model.db.session.commit()
     return Response(response=user.token, status=200)
-
-
-if __name__ == '__main__':
-    wsgi.app.run()

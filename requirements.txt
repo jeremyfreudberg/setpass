@@ -2,5 +2,6 @@ flake8
 Flask
 Flask-SQLAlchemy
 freezegun
+oslo.config
 pytest
 python-keystoneclient
