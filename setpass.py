@@ -26,7 +26,11 @@ class TokenExpiredException(Exception):
     pass
 
 
-class BadRequestException(Exception):
+class WrongPinException(Exception):
+    pass
+
+
+class InvalidPinException(Exception):
     pass
 
 
@@ -69,16 +73,19 @@ def view_form():
 def set_password():
     token = request.args.get('token')
     password = request.form['password']
+    pin = request.form['pin']
 
-    if not token or not password:
-        return Response(response='Not token/password in request', status=400)
+    if not token or not password or not pin:
+        return Response(response='Missing token/pin/password!', status=400)
 
     try:
-        _set_password(token, password)
+        _set_password(token, pin, password)
     except TokenNotFoundException:
         return Response(response='Token not found', status=404)
     except TokenExpiredException:
         return Response(response='Token expired', status=403)
+    except WrongPinException:
+        return Response(response='Wrong pin', status=403)
 
     return Response(status=200)
 
@@ -95,12 +102,15 @@ def _set_openstack_password(user_id, old_password, new_password):
     keystone.users.update_password(old_password, new_password)
 
 
-def _set_password(token, password):
+def _set_password(token, pin, password):
     # Find user for token
     user = User.find(token=token)
 
     if user is None:
         raise TokenNotFoundException
+
+    if pin != user.pin:
+        raise WrongPinException
 
     delta = datetime.datetime.utcnow() - user.updated_at
     if delta.total_seconds() > EXPIRES_AFTER_SECONDS:

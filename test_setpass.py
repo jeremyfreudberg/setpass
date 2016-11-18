@@ -50,17 +50,18 @@ class TestSetpass(object):
         assert wrong_token != user.token
 
         with pytest.raises(setpass.TokenNotFoundException):
-            setpass._set_password(wrong_token, 'password2')
+            setpass._set_password(wrong_token, user.pin, 'password2')
 
     def test_internal_set_password_twice(self, user):
-        setpass._set_password(user.token, 'new_password')
+        pin = user.pin
+        setpass._set_password(user.token, pin, 'new_password')
         with pytest.raises(setpass.TokenNotFoundException):
-            setpass._set_password(user.token, 'another_new_password')
+            setpass._set_password(user.token, pin, 'another_new_password')
 
     def test_internal_expired_token(self, user):
         with freezegun.freeze_time(self._get_expired_time(user.updated_at)):
             with pytest.raises(setpass.TokenExpiredException):
-                setpass._set_password(user.token, 'new_password')
+                setpass._set_password(user.token, user.pin, 'new_password')
 
     # API Tests
     def test_add_new_user(self, app):
@@ -127,7 +128,9 @@ class TestSetpass(object):
     def test_set_pass(self, app, user):
         # Change password
         token = user.token
-        r = app.post('/?token=%s' % token, data={'password': 'NEW_PASS'})
+        pin = user.pin # Save the pin, to reuse it after row deletion
+        r = app.post('/?token=%s' % token,
+                     data={'password': 'NEW_PASS', 'pin': pin})
         assert r.status_code == 200
 
         # Ensure user record is deleted
@@ -135,19 +138,37 @@ class TestSetpass(object):
         assert user is None
 
         # Ensure we get a 404 when reusing the token
-        r = app.post('/?token=%s' % token, data={'password': 'NEW_NEW_PASS'})
+        r = app.post('/?token=%s' % token,
+                     data={'password': 'NEW_NEW_PASS', 'pin': pin})
         assert r.status_code == 404
 
     def test_set_pass_expired(self, app, user):
         # Set time to after token expiration
         with freezegun.freeze_time(self._get_expired_time(user.updated_at)):
-            r = app.post('/?token=%s' % user.token, data={'password': 'NEW_PASS'})
+            r = app.post('/?token=%s' % user.token,
+                         data={'password': 'NEW_PASS', 'pin': user.pin})
 
         assert r.status_code == 403
 
     def test_wrong_token(self, app, user):
-        r = app.post('/?token=%s' % 'WRONG_TOKEN', data={'password': 'NEW_PASS'})
+        r = app.post('/?token=%s' % 'WRONG_TOKEN',
+                     data={'password': 'NEW_PASS', 'pin': user.pin})
         assert r.status_code == 404
+
+    def test_wrong_pin(self, app, user):
+        pin = '0000'
+        assert pin != user.pin
+
+        r = app.post('/?token=%s' % user.token,
+                     data={'password': 'NEW_PASS', 'pin': pin})
+        assert r.status_code == 403
+
+    def test_invalid_pin(self, app, user):
+        pin = 'fooo'
+
+        r = app.post('/?token=%s' % user.token,
+                     data={'password': 'NEW_PASS', 'pin': pin})
+        assert r.status_code == 403
 
     def test_no_arguments(self, app):
         # Token but no password
