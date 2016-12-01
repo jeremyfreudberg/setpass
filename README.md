@@ -36,11 +36,11 @@ $ python -m setpass.api
 
 ### Adding a new user:
 
-| URL      | /token/<user_id>                               |
-|----------|------------------------------------------------|
-| Method   | PUT                                            |
-| Headers  | X-Auth-Token                                   |
-| Body     | {password: <random_pass>, pin: <user_pin>}     |
+| URL      | /token/\<user_id\>                               |
+|----------|--------------------------------------------------|
+| Method   | PUT                                              |
+| Headers  | X-Auth-Token                                     |
+| Body     | {password: \<random_pass\>, pin: \<user_pin\>}   |
 | Response | Token
 
 Please note, to authorize the request to add a new user, setpass checks for a
@@ -64,15 +64,15 @@ from keystoneauth1 import session
 
 # Create a new keystoneauth auth object, it doesn't need to be scoped to
 # any project, but the user needs to have a role in the admin project.
-auth = v3.Password(auth_url=<https://example.com:5000/v3>,
-                   username=<admin_username>,
+auth = v3.Password(auth_url='https://example.com:5000/v3',
+                   username='admin_username',
                    user_domain_id='default',
-                   password=<admin_password>)
+                   password='admin_password')
 
 sess = session.Session(auth=auth)
 
-body = json.dumps({ 'password': <openstack_password>, 'pin': <user_pin> })
-r = sess.post('https://example.com/token/%s' % <user_id>, body=body)
+body = { 'password': 'openstack_password', 'pin': 'user_pin' }
+r = sess.post('https://example.com/token/%s' % 'user_id', json=body)
 
 # this is the token that will be sent to the user
 token = r.text
