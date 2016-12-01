@@ -61,7 +61,7 @@ def set_password():
     except exception.OpenStackError as e:
         return Response(response=e.message, status=500)
 
-    return Response(status=200)
+    return Response(response='Password set.', status=200)
 
 
 def _set_openstack_password(user_id, old_password, new_password):
