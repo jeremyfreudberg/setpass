@@ -57,15 +57,26 @@ def set_password():
 
 
 def _set_openstack_password(user_id, old_password, new_password):
-    auth = v3.Password(auth_url='https://my.keystone.com:5000/v3',
+    auth = v3.Password(auth_url=CONF.auth_url,
                        user_id=user_id,
-                       password=old_password,
-                       project_id='project_id')
+                       password=old_password)
 
     sess = session.Session(auth=auth)
     keystone = client.Client(session=sess)
 
     keystone.users.update_password(old_password, new_password)
+
+
+def _check_admin_token(token):
+    auth = v3.Password(auth_url=CONF.auth_url,
+                       token=token,
+                       project_name=CONF.admin_project_name,
+                       project_domain_id=CONF.admin_project_domain_id)
+
+    sess = session.Session(auth=auth)
+    keystone = client.Client(session=sess)
+
+    keystone.tokens.validate(token)
 
 
 def _set_password(token, pin, password):
@@ -90,6 +101,14 @@ def _set_password(token, pin, password):
 
 @wsgi.app.route('/token/<user_id>', methods=['PUT'])
 def add(user_id):
+    token = request.headers.get('x-auth-token', None)
+
+    if not token:
+        return Response(response='Unauthorized', status=401)
+
+    if not _check_admin_token(token):
+        return Response(response='Forbidden', status=403)
+
     payload = json.loads(request.data)
 
     user = model.User.find(user_id=user_id)

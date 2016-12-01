@@ -31,6 +31,14 @@ default_opts = [
                default='http://localhost:5000',
                help='Identity service authentication url.'),
 
+    cfg.StrOpt('admin_project_name',
+               default='admin',
+               help='Admin project name'),
+
+    cfg.StrOpt('admin_project_domain_id',
+               default='default',
+               help='Admin project domain id'),
+
     cfg.IntOpt('token_expiration',
                default=False,
                help='Time in seconds that a token is valid.'),

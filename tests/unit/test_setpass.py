@@ -50,6 +50,10 @@ class TestSetpass(object):
         return timestamp + \
                datetime.timedelta(seconds=CONF['token_expiration'] + 5)
 
+    @staticmethod
+    def _get_auth_headers():
+        return {'x-auth-token': str(uuid.uuid4())}
+
     # Internal method tests
     def test_internal_wrong_token(self, user):
         wrong_token = 'wrong_token'
@@ -70,7 +74,9 @@ class TestSetpass(object):
                 api._set_password(user.token, user.pin, 'new_password')
 
     # API Tests
-    def test_add_new_user(self, app):
+    def test_add_new_user(self, app, mocker):
+        mocker.patch('setpass.api._check_admin_token', return_value=True)
+
         user_id = str(uuid.uuid4())
         pin = '1234'
         password = str(uuid.uuid4())
@@ -78,7 +84,9 @@ class TestSetpass(object):
 
         with freezegun.freeze_time("2016-01-01"):
             timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user_id, data=payload)
+            r = app.put('/token/%s' % user_id,
+                        data=payload,
+                        headers=self._get_auth_headers())
 
         user = model.User.find(token=r.data)
         assert user.user_id == user_id
@@ -87,14 +95,42 @@ class TestSetpass(object):
         assert timestamp == user.updated_at
         assert r.status_code == 200
 
-    def test_add_update_pin(self, app, user):
+    def test_add_no_token(self, app):
+        user_id = str(uuid.uuid4())
+        pin = '1234'
+        password = str(uuid.uuid4())
+        payload = json.dumps({'password': password, 'pin': pin})
+
+        r = app.put('/token/%s' % user_id, data=payload)
+
+        assert r.status_code == 401
+
+    def test_add_wrong_token(self, app, mocker):
+        mocker.patch('setpass.api._check_admin_token', return_value=False)
+
+        user_id = str(uuid.uuid4())
+        pin = '1234'
+        password = str(uuid.uuid4())
+        payload = json.dumps({'password': password, 'pin': pin})
+
+        r = app.put('/token/%s' % user_id,
+                    data=payload,
+                    headers=self._get_auth_headers())
+
+        assert r.status_code == 403
+
+    def test_add_update_pin(self, app, user, mocker):
+        mocker.patch('setpass.api._check_admin_token', return_value=True)
+
         old_token = user.token
         new_pin = '9876'
         payload = {'pin': new_pin}
 
         with freezegun.freeze_time("2016-01-01"):
             timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user.user_id, data=json.dumps(payload))
+            r = app.put('/token/%s' % user.user_id,
+                        data=json.dumps(payload),
+                        headers=self._get_auth_headers())
 
         assert user.pin == new_pin
         assert user.token != old_token
@@ -102,14 +138,18 @@ class TestSetpass(object):
         assert r.data == user.token
         assert r.status_code == 200
 
-    def test_add_update_password(self, app, user):
+    def test_add_update_password(self, app, user, mocker):
+        mocker.patch('setpass.api._check_admin_token', return_value=True)
+
         old_token = user.token
         new_password = str(uuid.uuid4())
         payload = {'password': new_password}
 
         with freezegun.freeze_time("2016-01-01"):
             timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user.user_id, data=json.dumps(payload))
+            r = app.put('/token/%s' % user.user_id,
+                        data=json.dumps(payload),
+                        headers=self._get_auth_headers())
 
         assert user.password == new_password
         assert user.token != old_token
@@ -117,14 +157,18 @@ class TestSetpass(object):
         assert r.data == user.token
         assert r.status_code == 200
 
-    def test_add_update_pin_and_password(self, app, user):
+    def test_add_update_pin_and_password(self, app, user, mocker):
+        mocker.patch('setpass.api._check_admin_token', return_value=True)
+
         pin = '1234'
         password = str(uuid.uuid4())
         payload = json.dumps({'password': password, 'pin': pin})
 
         with freezegun.freeze_time("2016-01-01"):
             timestamp = datetime.datetime.utcnow()
-            r = app.put('/token/%s' % user.user_id, data=payload)
+            r = app.put('/token/%s' % user.user_id,
+                        data=payload,
+                        headers=self._get_auth_headers())
 
         assert user.password == password
         assert user.pin == pin
