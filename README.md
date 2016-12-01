@@ -26,6 +26,14 @@ one.
 
 ## Usage
 
+To run it:
+
+```
+# Possibly in a virtual environment
+$ pip install -r requirements.txt
+$ python -m setpass.api
+```
+
 ### Adding a new user:
 
 | URL      | /token/<user_id>                               |
