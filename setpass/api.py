@@ -154,4 +154,4 @@ def add(user_id):
 
 
 if __name__ == '__main__':
-    wsgi.app.run(port=5001, host='0.0.0.0')
+    wsgi.app.run(port=CONF.port, host='0.0.0.0')
