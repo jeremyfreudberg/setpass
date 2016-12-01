@@ -33,6 +33,10 @@ CONF = config.CONF
 
 @wsgi.app.route('/', methods=['GET'])
 def view_form():
+    token = request.args.get('token', None)
+    if not token:
+        return Response(response='Token not found', status=404)
+
     return render_template('password_form.html')
 
 
@@ -90,6 +94,8 @@ def _check_admin_token(token):
     # token, assume admin.
     sess.get_token()
 
+    return True
+
 
 def _set_password(token, pin, password):
     # Find user for token
@@ -146,4 +152,4 @@ def add(user_id):
 
 
 if __name__ == '__main__':
-    wsgi.app.run(port=5001)
+    wsgi.app.run(port=5001, host='0.0.0.0')
