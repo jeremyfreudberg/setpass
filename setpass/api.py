@@ -93,7 +93,7 @@ def _set_password(token, pin, password):
     if delta.total_seconds() > CONF['token_expiration']:
         raise exception.TokenExpiredException
 
-    # _set_openstack_password(user.user_id, user.password, password)
+    _set_openstack_password(user.user_id, user.password, password)
 
     model.db.session.delete(user)
     model.db.session.commit()

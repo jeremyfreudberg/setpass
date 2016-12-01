@@ -62,7 +62,9 @@ class TestSetpass(object):
         with pytest.raises(exception.TokenNotFoundException):
             api._set_password(wrong_token, user.pin, 'password2')
 
-    def test_internal_set_password_twice(self, user):
+    def test_internal_set_password_twice(self, user, mocker):
+        mocker.patch('setpass.api._set_openstack_password', return_value=True)
+
         pin = user.pin
         api._set_password(user.token, pin, 'new_password')
         with pytest.raises(exception.TokenNotFoundException):
@@ -175,7 +177,9 @@ class TestSetpass(object):
         assert timestamp == user.updated_at
         assert r.status_code == 200
 
-    def test_set_pass(self, app, user):
+    def test_set_pass(self, app, user, mocker):
+        mocker.patch('setpass.api._set_openstack_password', return_value=True)
+
         # Change password
         token = user.token
         pin = user.pin  # Save the pin to reuse it after row deletion
