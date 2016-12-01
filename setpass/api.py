@@ -20,6 +20,7 @@ from flask import Response
 from flask import request, render_template
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
+from keystoneauth1.exceptions import http as ksa_exceptions
 
 from setpass import config
 from setpass import model
@@ -89,12 +90,13 @@ def _check_admin_token(token):
                     project_domain_id=CONF.admin_project_domain_id)
 
     sess = session.Session(auth=auth)
-
     # If we're able to scope succesfully to the admin project with this
     # token, assume admin.
-    sess.get_token()
-
-    return True
+    try:
+        sess.get_token()
+        return True
+    except ksa_exceptions.Unauthorized:
+        return False
 
 
 def _set_password(token, pin, password):
