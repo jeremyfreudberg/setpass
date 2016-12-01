@@ -33,16 +33,18 @@ class User(db.Model):
     pin = db.Column(db.String(4), nullable=False)
     password = db.Column(db.String(64), nullable=False)
     updated_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, nullable=False)
 
     def __init__(self, user_id, token, pin, password):
         self.user_id = user_id
         self.token = token
         self.pin = pin
         self.password = password
-        self.update_timestamp()
+        self.update_timestamp_and_attempts()
 
-    def update_timestamp(self):
+    def update_timestamp_and_attempts(self):
         self.updated_at = datetime.datetime.utcnow()
+        self.attempts = 0
 
     def __repr__(self):
         return '<User %r, Token %r>' % (self.user_id, self.token)

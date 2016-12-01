@@ -60,6 +60,9 @@ def set_password():
         return Response(response='Wrong pin', status=403)
     except exception.OpenStackError as e:
         return Response(response=e.message, status=500)
+    except exception.AccountLocked:
+        return Response(response='Account locked, too many wrong attempts!',
+                        status=403)
 
     return Response(response='Password set.', status=200)
 
@@ -99,6 +102,11 @@ def _check_admin_token(token):
         return False
 
 
+def _increase_attempts(user):
+    user.attempts += 1
+    model.db.session.commit()
+
+
 def _set_password(token, pin, password):
     # Find user for token
     user = model.User.find(token=token)
@@ -106,7 +114,11 @@ def _set_password(token, pin, password):
     if user is None:
         raise exception.TokenNotFoundException
 
+    if user.attempts > CONF.max_attempts:
+        raise exception.AccountLocked
+
     if pin != user.pin:
+        _increase_attempts(user)
         raise exception.WrongPinException
 
     delta = datetime.datetime.utcnow() - user.updated_at
@@ -139,7 +151,7 @@ def add(user_id):
             user.password = payload['password']
 
         user.token = str(uuid.uuid4())
-        user.update_timestamp()
+        user.update_timestamp_and_attempts()
     else:
         user = model.User(
             user_id=user_id,

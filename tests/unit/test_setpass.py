@@ -217,6 +217,28 @@ class TestSetpass(object):
                      data={'password': 'NEW_PASS', 'pin': pin})
         assert r.status_code == 403
 
+    def test_lockout(self, app, user):
+        token = user.token
+        pin = '0000'
+        assert pin != user.pin
+        assert user.attempts == 0
+
+        # Set the current number of attempts to the max
+        user.attempts = CONF.max_attempts
+        model.db.session.commit()
+
+        app.post('/?token=%s' % user.token,
+                     data={'password': 'NEW_PASS', 'pin': pin})
+
+        user = model.User.find(token=token)
+        assert user is not None
+        assert user.attempts == CONF.max_attempts + 1
+
+        # Provide the correct pin, but we went beyond max attempts
+        r = app.post('/?token=%s' % user.token,
+                     data={'password': 'NEW_PASS', 'pin': user.pin})
+        assert r.status_code == 403
+
     def test_invalid_pin(self, app, user):
         pin = 'fooo'
 

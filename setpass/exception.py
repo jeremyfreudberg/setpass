@@ -29,5 +29,9 @@ class InvalidPinException(Exception):
     pass
 
 
+class AccountLocked(Exception):
+    pass
+
+
 class OpenStackError(Exception):
     pass

@@ -42,6 +42,10 @@ default_opts = [
     cfg.IntOpt('token_expiration',
                default=False,
                help='Time in seconds that a token is valid.'),
+
+    cfg.IntOpt('max_attempts',
+               default=3,
+               help='Max number of pin attempts before lockout.')
 ]
 
 CONF.register_opts(default_opts)
