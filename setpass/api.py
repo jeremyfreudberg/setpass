@@ -79,10 +79,10 @@ def _set_openstack_password(user_id, old_password, new_password):
 
 
 def _check_admin_token(token):
-    auth = v3.Password(auth_url=CONF.auth_url,
-                       token=token,
-                       project_name=CONF.admin_project_name,
-                       project_domain_id=CONF.admin_project_domain_id)
+    auth = v3.Token(auth_url=CONF.auth_url,
+                    token=token,
+                    project_name=CONF.admin_project_name,
+                    project_domain_id=CONF.admin_project_domain_id)
 
     sess = session.Session(auth=auth)
 
