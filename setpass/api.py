@@ -26,6 +26,8 @@ from setpass import model
 from setpass import wsgi
 from setpass import exception
 
+application = wsgi.app
+
 CONF = config.CONF
 
 
@@ -51,8 +53,8 @@ def set_password():
         return Response(response='Token expired', status=403)
     except exception.WrongPinException:
         return Response(response='Wrong pin', status=403)
-    except exception.OpenStackError:
-        return Response(response='OpenStack Error', status=500)
+    except exception.OpenStackError as e:
+        return Response(response=e.message, status=500)
 
     return Response(status=200)
 
@@ -73,7 +75,7 @@ def _set_openstack_password(user_id, old_password, new_password):
     if 200 <= r.status_code < 300:
         return True
     else:
-        raise exception.OpenStackError
+        raise exception.OpenStackError(r.text)
 
 
 def _check_admin_token(token):
@@ -141,3 +143,7 @@ def add(user_id):
 
     model.db.session.commit()
     return Response(response=user.token, status=200)
+
+
+if __name__ == '__main__':
+    wsgi.app.run(port=5001)
