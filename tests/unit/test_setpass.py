@@ -228,7 +228,7 @@ class TestSetpass(object):
         model.db.session.commit()
 
         app.post('/?token=%s' % user.token,
-                     data={'password': 'NEW_PASS', 'pin': pin})
+                 data={'password': 'NEW_PASS', 'pin': pin})
 
         user = model.User.find(token=token)
         assert user is not None
