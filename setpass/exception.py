@@ -27,3 +27,7 @@ class WrongPinException(Exception):
 
 class InvalidPinException(Exception):
     pass
+
+
+class OpenStackError(Exception):
+    pass

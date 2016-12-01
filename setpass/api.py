@@ -20,7 +20,6 @@ from flask import Response
 from flask import request, render_template
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
-from keystoneclient.v3 import client
 
 from setpass import config
 from setpass import model
@@ -52,6 +51,8 @@ def set_password():
         return Response(response='Token expired', status=403)
     except exception.WrongPinException:
         return Response(response='Wrong pin', status=403)
+    except exception.OpenStackError:
+        return Response(response='OpenStack Error', status=500)
 
     return Response(status=200)
 
@@ -62,9 +63,17 @@ def _set_openstack_password(user_id, old_password, new_password):
                        password=old_password)
 
     sess = session.Session(auth=auth)
-    keystone = client.Client(session=sess)
 
-    keystone.users.update_password(old_password, new_password)
+    url = '%s/users/%s/password' % (CONF.auth_url, user_id)
+    payload = {'user': {'password': new_password,
+                        'original_password': old_password}}
+
+    r = sess.post(url, data=json.dumps(payload))
+
+    if 200 <= r.status_code < 300:
+        return True
+    else:
+        raise exception.OpenStackError
 
 
 def _check_admin_token(token):
@@ -74,9 +83,10 @@ def _check_admin_token(token):
                        project_domain_id=CONF.admin_project_domain_id)
 
     sess = session.Session(auth=auth)
-    keystone = client.Client(session=sess)
 
-    keystone.tokens.validate(token)
+    # If we're able to scope succesfully to the admin project with this
+    # token, assume admin.
+    sess.get_token()
 
 
 def _set_password(token, pin, password):

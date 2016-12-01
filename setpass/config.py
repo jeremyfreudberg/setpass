@@ -28,7 +28,7 @@ default_opts = [
                help='Web server port number.'),
 
     cfg.StrOpt('auth_url',
-               default='http://localhost:5000',
+               default='http://localhost:5000/v3',
                help='Identity service authentication url.'),
 
     cfg.StrOpt('admin_project_name',
