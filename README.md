@@ -72,7 +72,7 @@ auth = v3.Password(auth_url='https://example.com:5000/v3',
 sess = session.Session(auth=auth)
 
 body = { 'password': 'openstack_password', 'pin': 'user_pin' }
-r = sess.post('https://example.com/token/%s' % 'user_id', json=body)
+r = sess.put('https://example.com/token/%s' % 'user_id', json=body)
 
 # this is the token that will be sent to the user
 token = r.text

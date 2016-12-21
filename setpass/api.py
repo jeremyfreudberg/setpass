@@ -78,7 +78,8 @@ def _set_openstack_password(user_id, old_password, new_password):
     payload = {'user': {'password': new_password,
                         'original_password': old_password}}
 
-    r = sess.post(url, data=json.dumps(payload))
+    header = {'Content-Type': 'application/json'}
+    r = sess.post(url, headers=header, data=json.dumps(payload))
 
     if 200 <= r.status_code < 300:
         return True
